@@ -104,6 +104,10 @@ describe('hostForSandbox', () => {
     expect(hostForSandbox('sbx')).toBe('host.docker.internal')
   })
 
+  it('uses host.microsandbox.internal for microsandbox', () => {
+    expect(hostForSandbox('microsandbox')).toBe('host.microsandbox.internal')
+  })
+
   it('uses loopback for other providers', () => {
     expect(hostForSandbox('local-process')).toBe('127.0.0.1')
     expect(hostForSandbox('daytona')).toBe('127.0.0.1')

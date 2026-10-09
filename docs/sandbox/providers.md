@@ -2,7 +2,7 @@
 title: Providers
 id: providers
 order: 3
-description: "Pick and configure where a TanStack AI sandbox runs (local process, Docker container, Docker Sandboxes microVM, Daytona, Vercel, Upstash Box, Blaxel, E2B, boxd, or Railway) and what each one can do."
+description: "Pick and configure where a TanStack AI sandbox runs (local process, Docker container, Docker Sandboxes microVM, Daytona, Vercel, Upstash Box, Blaxel, E2B, boxd, Railway, or microsandbox) and what each one can do."
 ---
 
 A provider owns the isolation primitive: where the harness actually runs. Every
@@ -34,6 +34,7 @@ completed workspace data in your application persistence for reconstruction.
 | Blaxel | `@tanstack/ai-sandbox-blaxel` | cloud sandbox | Managed [Blaxel](https://blaxel.ai) sandboxes; durable filesystem, per-port preview URLs, native file watch, resume-by-id. Snapshot/fork remain disabled while the source-scoped private-preview semantics are unproven. Accepts `BL_API_KEY` + `BL_WORKSPACE` or SDK-resolved CLI or client credentials. |
 | E2B | `@tanstack/ai-sandbox-e2b` | microVM | Managed [E2B](https://e2b.dev) Firecracker sandboxes. Native snapshots and fork, preview URLs, writable stdin, process-group kill, resume-by-id (also wakes a paused sandbox). Needs `E2B_API_KEY`. |
 | boxd | `@tanstack/ai-sandbox-boxd` | microVM | Managed [boxd](https://boxd.sh) KVM microVMs; live fork (memory and processes), snapshots that restore into a new machine, persistent disk, resume-by-id across stop, suspend and hibernate, one public HTTPS URL per machine. Needs `BOXD_API_KEY` + `BOXD_ORG`. |
+| microsandbox | `@tanstack/ai-sandbox-microsandbox` | microVM (local) | [microsandbox](https://github.com/superradcompany/microsandbox) microVMs on your own machine. No cloud account and no Docker daemon. Disk snapshots, live fork, resume-by-id. Needs KVM, Apple Silicon, or WHP. |
 | Railway | `@tanstack/ai-sandbox-railway` | microVM | Managed [Railway](https://railway.com) sandboxes. Private networking to your other Railway services, live disk fork, environment-scoped checkpoints that survive deletion of their source, durable exec sessions, create-time HTTP domains, resume-by-id. Needs `RAILWAY_API_TOKEN` or `RAILWAY_TOKEN` + an environment. |
 
 Most providers are their own package. `dockerSandbox()` and `sbxSandbox()` both
@@ -50,6 +51,7 @@ import { blaxelSandbox } from '@tanstack/ai-sandbox-blaxel'
 import { e2bSandbox } from '@tanstack/ai-sandbox-e2b'
 import { boxdSandbox } from '@tanstack/ai-sandbox-boxd'
 import { railwaySandbox } from '@tanstack/ai-sandbox-railway'
+import { microsandboxSandbox } from '@tanstack/ai-sandbox-microsandbox'
 
 const dev = localProcessSandbox() // runs on your host
 const isolated = dockerSandbox({ image: 'node:22' }) // container
@@ -61,6 +63,7 @@ const blaxel = blaxelSandbox() // managed Blaxel sandbox; uses API-key or CLI cr
 const e2b = e2bSandbox() // managed E2B microVM; reads E2B_API_KEY
 const boxd = boxdSandbox({ org: 'acme' }) // managed boxd microVM; reads BOXD_API_KEY
 const railway = railwaySandbox() // managed Railway sandbox; reads RAILWAY_TOKEN + RAILWAY_ENVIRONMENT_ID
+const local = microsandboxSandbox() // microVM on this host; no credentials
 ```
 
 > Cloud providers (including Daytona, Vercel, Sprites, Upstash Box, Blaxel, E2B, boxd, and Railway)
@@ -605,6 +608,62 @@ const railway = railwaySandbox({
 - **Bridge:** like the other cloud providers, it is a remote VM, so bridged
   tools need the tunnel in local dev (see [tools](./tools)).
 
+## microsandbox
+
+```ts
+import { microsandboxSandbox } from '@tanstack/ai-sandbox-microsandbox'
+
+const microvm = microsandboxSandbox({
+  image: 'node:24',
+  cpus: 2,
+  memoryMiB: 2048,
+  ports: [3000],
+})
+```
+
+- **Isolation:** a [microsandbox](https://github.com/superradcompany/microsandbox)
+  libkrun microVM with its own guest kernel. It runs on the machine that runs
+  your app. You do not need a cloud account or a Docker daemon.
+- **Needs:** Linux with KVM, macOS on Apple Silicon, or Windows 11 with WHP
+  (preview). The `microsandbox` npm package installs the runtime for your
+  platform as an optional dependency. Do not install with optional
+  dependencies turned off.
+- **Image and size:** `image` is any OCI image. The default is `node:24`. Set
+  `cpus` and `memoryMiB` to change the size of the guest.
+- **Auth / env:** there is no provider login. Harness credentials are
+  [workspace secrets](./provisioning). They stay in memory on the handle, and
+  each command gets them through the SDK's native env argument. No value is
+  written to disk or into a command string.
+- **Lifetime:** a sandbox keeps running after your process exits, until
+  `destroy()`. Its state lives in `~/.microsandbox` (or `MSB_HOME`). If a
+  sandbox with the same id is still there at create, create replaces it.
+- **Snapshot / resume:** resume-by-id finds the sandbox by name and starts it
+  if it is stopped. The disk is kept across stop and start. `snapshot()` saves
+  a disk snapshot to the local snapshot store. `restoreSnapshot()` boots a new
+  sandbox from it, also after the source is destroyed. The contract has no
+  delete hook, so remove old snapshots with `Snapshot.remove()` from the
+  `microsandbox` SDK.
+- **Fork:** `fork()` is a native live fork with copy-on-write memory. It took
+  about 250 ms in our tests. A fork has no published ports. Fork is not
+  available with `allowHostAccess: true` or `network: 'deny'`, so
+  `capabilities.fork` is `false` there.
+- **Processes:** stdout and stderr stay separate. `spawn()` has a real guest
+  pid and a writable stdin. `kill()` sends `SIGKILL` and also stops
+  backgrounded children. `kill('SIGTERM')` and other signals go to the
+  command's shell only.
+- **Ports:** list guest ports in `ports`. Each one is published on a free port
+  on `127.0.0.1` at create and at restore. `ports.connect(port)` returns
+  `http://127.0.0.1:<host-port>` and rejects a port that is not in the list.
+- **Network:** `policy.capabilities.network: 'deny'` turns the guest network
+  off.
+- **Bridge:** a guest cannot reach your host by default. Set
+  `allowHostAccess: true` so that [bridged tools](./tools) work. The guest then
+  reaches the host's loopback at `host.microsandbox.internal`, so it can
+  connect to every service that listens on `127.0.0.1`. You do not need a
+  tunnel.
+- **Paths:** the guest user is `root`, and `/workspace` is a real directory.
+  Override it with `workdir`.
+
 ## Capabilities
 
 Providers declare what they support via `capabilities()`. The flags are:
@@ -616,7 +675,7 @@ Providers declare what they support via `capabilities()`. The flags are:
 | `env` | Inject environment variables. |
 | `ports` | Expose/forward ports (preview URLs). |
 | `backgroundProcesses` | Keep long-running processes alive between calls. |
-| `writableStdin` | A spawned process exposes a writable host→process stdin. `true` for local-process, Docker container, Daytona, Upstash Box, E2B, boxd, and Railway. `false` for Docker Sandboxes (`sbx`), Vercel, Sprites, Blaxel, and Cloudflare. When `false`, stdin-fed harnesses write the prompt to a file and redirect it in the shell. |
+| `writableStdin` | A spawned process exposes a writable host→process stdin. `true` for local-process, Docker container, Daytona, Upstash Box, E2B, boxd, Railway, and microsandbox. `false` for Docker Sandboxes (`sbx`), Vercel, Sprites, Blaxel, and Cloudflare. When `false`, stdin-fed harnesses write the prompt to a file and redirect it in the shell. |
 | `killableProcesses` | A spawned process can be forcibly stopped via `SpawnHandle.kill()` **and** aborted mid-flight via the `signal` passed to `spawn`. |
 | `snapshots` | Capture and restore point-in-time snapshots. |
 | `networkPolicy` | Enforce network allow/deny rules. |
@@ -670,6 +729,7 @@ merely slower while a wrong `follow` is a leak.
 | E2B | `true` | **Measured.** The SDK's own kill is a SIGKILL to the shell pid, and a backgrounded `( … ) & wait` child survived it. Every command therefore runs as a `setsid` group leader and `kill()` runs `kill -KILL -- -<pid>` inside the sandbox. The shared journal conformance kill case passes against a real sandbox. Needs `E2B_API_KEY`. |
 | Cloudflare | `false` | `kill()` is a no-op, and the caller's `AbortSignal` reaches neither `exec` nor `spawn`, because Workers RPC cannot serialize one. |
 | boxd | `true` | **Measured.** The spawn wrapper runs under `setsid`, so the pid it records leads its own process group. `kill()` runs a shell inside the machine that signals that group, escalates to `KILL`, and checks with `kill -0`. Closing the stream alone is not a kill: the process survived it. Verified against production: a spawned `sleep 5 && touch <marker>` was killed and the marker never appeared. Needs `BOXD_API_KEY`. |
+| microsandbox | `true` | **Measured.** `kill()` and an aborted `exec` or `spawn` use the SDK's kill, which is a `SIGKILL`. A backgrounded `( sleep 3 && touch <marker> ) & wait` child was stopped too, and the marker never appeared. The shared journal conformance kill case passes against a real microVM on Apple Silicon. Runs with `MICROSANDBOX_LIVE=1`. |
 | Railway | `true` | **Measured.** `kill()` and an aborted `exec` send `TERM` to the command's process group and escalate to `KILL` after 2 s. An aborted `spawn` sends `KILL` at once. Each settles only when the remote exit is confirmed. Verified against production: the shared journal conformance kill case passes, and spawned `sleep 5 && touch <marker>` commands (including a backgrounded child) were killed before the marker appeared, for `kill()`, an aborted `exec`, and an aborted `spawn`. Needs `RAILWAY_API_TOKEN` or `RAILWAY_TOKEN` + `RAILWAY_ENVIRONMENT_ID`. |
 
 Each of the remote providers registers the shared journal conformance suite, so

@@ -3226,6 +3226,19 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(vitest@4.1.11)
 
+  packages/ai-sandbox-microsandbox:
+    dependencies:
+      microsandbox:
+        specifier: ^0.7.7
+        version: 0.7.7
+    devDependencies:
+      '@tanstack/ai-sandbox':
+        specifier: workspace:*
+        version: link:../ai-sandbox
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.11)
+
   packages/ai-sandbox-railway:
     dependencies:
       railway:
@@ -6546,6 +6559,9 @@ packages:
     peerDependencies:
       react: ^18 || ^19
       react-dom: ^18 || ^19
+
+  '@microsandbox/types@0.7.7':
+    resolution: {integrity: sha512-67/tP2k+tpksQbIIvzbPGtiq3Ai/3242NLTkxTZawelUk+qVvOc3BygAVK+kxoHYJW0fyTtmZ1mYAyJrXLSSEg==}
 
   '@microsoft/api-extractor-model@7.29.6':
     resolution: {integrity: sha512-gC0KGtrZvxzf/Rt9oMYD2dHvtN/1KPEYsrQPyMKhLHnlVuO/f4AFN3E4toqZzD2pt4LhkKoYmL2H9tX3yCOyRw==}
@@ -10176,6 +10192,38 @@ packages:
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^9.0.0 || ^10.0.0
+
+  '@superradcompany/microsandbox-darwin-arm64@0.7.7':
+    resolution: {integrity: sha512-vvyMNGytk2R/HpCJXGekNniUuzKbQH+ARZMC4Ne4BxEu9q1gDmx4bfn6NdQ2Gej5oIfQEyiuK7naq3U8/GC2lQ==}
+    engines: {node: '>= 22'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@superradcompany/microsandbox-linux-arm64-gnu@0.7.7':
+    resolution: {integrity: sha512-/s6icz7ox8jz1vCdr6c3USnX08cDNUZ0SEjFhYVrcmumXrMfjNmfCke7aRBxkmF17uhY/0h1wsmeDZPoUL4wAA==}
+    engines: {node: '>= 22'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@superradcompany/microsandbox-linux-x64-gnu@0.7.7':
+    resolution: {integrity: sha512-sn19EZNpHgQ/wFv6S0eyNEh/c5+CBl629h8AG5o94ZYY05tbVDmBqI33wrdA7nGKySbx/2Uni+ecKvGVi0jTgg==}
+    engines: {node: '>= 22'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@superradcompany/microsandbox-win32-arm64-msvc@0.7.7':
+    resolution: {integrity: sha512-Ggzi1SGFeErCjaNdMiel7siFjHHILVNrTHvnNMPH4VMVGTNnYmmz0LRx8Z6fWLEQrmZe9YsW2Bx1oEvD9mbpKQ==}
+    engines: {node: '>= 22'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@superradcompany/microsandbox-win32-x64-msvc@0.7.7':
+    resolution: {integrity: sha512-KCiwNMN1beDzTEMuJ6AK4nJk2DMME3hvv8x4dB12uwpCRoRnIwWajs4rp7/UogZEMV/wO/skhNFJaNzTpt9QWQ==}
+    engines: {node: '>= 22'}
+    cpu: [x64]
+    os: [win32]
 
   '@sveltejs/acorn-typescript@1.0.13':
     resolution: {integrity: sha512-wgKggnhZVL9Bfx1OaKKTrYY9BFRk6C8UAkQNUcIv1+llzYrIqy+RZm5HPKzn0NpEBvTVhTqB4kQyllZywsRBRQ==}
@@ -15130,6 +15178,11 @@ packages:
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  microsandbox@0.7.7:
+    resolution: {integrity: sha512-H2ipvZyDATXlQAem3Yhf5OZ6dUxOVJlgC/QMSEVZOBqB3UN3OOqPcpk3Tg7MqkKnKucuUF5GMsAvmb8d8BADXQ==}
+    engines: {node: '>= 22'}
+    hasBin: true
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -22261,6 +22314,8 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
+  '@microsandbox/types@0.7.7': {}
+
   '@microsoft/api-extractor-model@7.29.6(@types/node@24.10.3)':
     dependencies:
       '@microsoft/tsdoc': 0.15.1
@@ -26386,6 +26441,21 @@ snapshots:
       espree: 10.4.0
       estraverse: 5.3.0
       picomatch: 4.0.4
+
+  '@superradcompany/microsandbox-darwin-arm64@0.7.7':
+    optional: true
+
+  '@superradcompany/microsandbox-linux-arm64-gnu@0.7.7':
+    optional: true
+
+  '@superradcompany/microsandbox-linux-x64-gnu@0.7.7':
+    optional: true
+
+  '@superradcompany/microsandbox-win32-arm64-msvc@0.7.7':
+    optional: true
+
+  '@superradcompany/microsandbox-win32-x64-msvc@0.7.7':
+    optional: true
 
   '@sveltejs/acorn-typescript@1.0.13(acorn@8.18.0)':
     dependencies:
@@ -32816,6 +32886,16 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
+
+  microsandbox@0.7.7:
+    dependencies:
+      '@microsandbox/types': 0.7.7
+    optionalDependencies:
+      '@superradcompany/microsandbox-darwin-arm64': 0.7.7
+      '@superradcompany/microsandbox-linux-arm64-gnu': 0.7.7
+      '@superradcompany/microsandbox-linux-x64-gnu': 0.7.7
+      '@superradcompany/microsandbox-win32-arm64-msvc': 0.7.7
+      '@superradcompany/microsandbox-win32-x64-msvc': 0.7.7
 
   mime-db@1.52.0: {}
 
