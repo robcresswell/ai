@@ -361,9 +361,48 @@ Processes on Railway:
 - Blocking `exec` runs without a durable session. If the connection drops, the command dies.
 - `kill()` and an aborted `exec` send `TERM` to the process group, then `KILL` after 2 s. An aborted `spawn` sends `KILL` at once. All of them finish only on the confirmed remote exit. An aborted `exec` resolves with the exit code of the signal.
 
+## microsandbox
+
+```ts
+import { microsandboxSandbox } from '@tanstack/ai-sandbox-microsandbox'
+
+const microvm = microsandboxSandbox({
+  image: 'node:24',
+  cpus: 2,
+  memoryMiB: 2048,
+  ports: [3000],
+})
+```
+
+- **Isolation:** a [microsandbox](https://github.com/superradcompany/microsandbox) libkrun microVM with its own guest kernel. It runs on the machine that runs your app. You do not need a cloud account or a Docker daemon.
+- **Needs:** Linux with KVM, macOS on Apple Silicon, or Windows 11 with WHP (preview). The `microsandbox` npm package installs the runtime for your platform as an optional dependency. Do not install with optional dependencies turned off.
+- **Image and size:** `image` is any OCI image. The default is `node:24`. Set `cpus` and `memoryMiB` to change the size of the guest.
+- **Auth and env:** there is no provider login. Harness credentials are [workspace secrets](./provisioning). They stay in memory on the handle, and each command gets them through the native env argument of the SDK. No value goes to disk or into a command string.
+- **Lifetime:** a sandbox keeps running after your process exits, until `destroy()`. Its state lives in `~/.microsandbox` (or `MSB_HOME`). If a sandbox with the same id is still there at create, create replaces it.
+- **Fork:** `fork()` is a native live fork with copy-on-write memory. It took about 250 ms in our tests. A fork has no published ports. Fork is not available with `allowHostAccess: true` or `network: 'deny'`, so `capabilities.fork` is `false` there.
+- **Ports:** list guest ports in `ports`. Each one is published on a free port on `127.0.0.1` at create and at restore. `ports.connect(port)` returns `http://127.0.0.1:<host-port>` and rejects a port that is not in the list.
+- **Network:** `policy.capabilities.network: 'deny'` turns the guest network off.
+- **Bridge:** a guest cannot reach your host by default. Set `allowHostAccess: true` so that [bridged tools](./tools) work. The guest then reaches the loopback of your host at `host.microsandbox.internal`, so it can connect to every service that listens on `127.0.0.1`. You do not need a tunnel.
+- **Paths:** the guest user is `root`, and `/workspace` is a real directory. Set `workdir` to change it.
+
+Snapshots and resume on microsandbox:
+
+- Resume by id finds the sandbox by name and starts it if it is stopped. The disk stays across stop and start.
+- `snapshot()` saves a disk snapshot to the local snapshot store. `restoreSnapshot()` boots a new sandbox from it, also after the source is destroyed.
+- The contract has no delete hook. Remove old snapshots with `Snapshot.remove()` from the `microsandbox` SDK.
+- By default, `defineSandbox()` saves a snapshot after setup on each create. These snapshots stay in `~/.microsandbox` until you remove them. To stop them, set `lifecycle: { snapshot: 'none' }` on `defineSandbox()`. Then, if a sandbox is gone, `ensure()` creates a new one and runs setup again (see [Lifecycle](./lifecycle)).
+
+Processes on microsandbox:
+
+- stdout and stderr stay separate.
+- `spawn()` has a real guest pid and a writable stdin.
+- `kill()` sends `SIGKILL` and also stops background children.
+- `kill('SIGTERM')` and other signals go to the shell of the command only.
+- Each stream has an 8 MiB limit. Past that limit, the output is cut and the process is killed.
+
 ## `writableStdin` per provider
 
-- `true`: local process, Docker container, Daytona, Upstash Box, E2B, boxd, and Railway.
+- `true`: local process, Docker container, Daytona, Upstash Box, E2B, boxd, Railway, and microsandbox.
 - `false`: Docker Sandboxes (`sbx`), Vercel, Sprites, Blaxel, and Cloudflare.
 
 When the value is `false`, a harness that reads its prompt from stdin gets the prompt from a file. The shell redirects that file into the process.
@@ -393,6 +432,7 @@ If a provider cannot be measured yet, it stays `false`. A `false` value only mak
 | Cloudflare | `false` | `kill()` does nothing. The `AbortSignal` of the caller reaches neither `exec` nor `spawn`, because Workers RPC cannot serialize one. |
 | boxd | `true` | **Measured.** The spawn wrapper runs under `setsid`, so the recorded pid leads its own process group. `kill()` runs a shell inside the machine that signals that group, then sends `KILL`, then checks with `kill -0`. Closing the stream alone is not a kill: the process survived it. Verified against production: a spawned `sleep 5 && touch <marker>` was killed, and the marker never appeared. Needs `BOXD_API_KEY`. |
 | Railway | `true` | **Measured.** `kill()` and an aborted `exec` send `TERM` to the process group, then `KILL` after 2 s. An aborted `spawn` sends `KILL` at once. Each one finishes only when the remote exit is confirmed. Verified against production: the shared journal conformance kill case passes. Spawned `sleep 5 && touch <marker>` commands (one with a background child) were killed before the marker appeared, for `kill()`, an aborted `exec`, and an aborted `spawn`. Needs `RAILWAY_API_TOKEN` or `RAILWAY_TOKEN` and `RAILWAY_ENVIRONMENT_ID`. |
+| microsandbox | `true` | **Measured.** `kill()` and an aborted `exec` or `spawn` use the SDK kill, which is a `SIGKILL`. A background `( sleep 3 && touch <marker> ) & wait` child was stopped too, and the marker never appeared. The shared journal conformance kill case passes against a real microVM on Apple Silicon. Runs with `MICROSANDBOX_LIVE=1`. |
 
 Each remote provider registers the shared journal conformance suite, so you can test each claim:
 

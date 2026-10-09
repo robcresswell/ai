@@ -126,6 +126,7 @@ The bridge is an HTTP endpoint that the sandbox calls back to. So the sandbox mu
 | Local process | `localhost` | None. |
 | Docker container (`dockerSandbox`) | `host.docker.internal` | None. |
 | Docker Sandboxes (`sbxSandbox`) | `host.docker.internal` | A deny or ask allowlist must include `localhost`. `sbxSandbox()` adds it when it writes a real allowlist. |
+| microsandbox (`microsandboxSandbox`) | `host.microsandbox.internal` | Set `allowHostAccess: true`. No tunnel. |
 | Deployed server (production) | A URL your provisioner advertises | Provide a bridge provisioner. |
 | Cloud sandbox, driven from your laptop | Your laptop, which has no public URL | Tunnel the bridge with `withNgrokBridge`. |
 
@@ -137,9 +138,21 @@ The sandbox runs on the same machine as your server. It reaches it on `localhost
 
 The guest still calls `host.docker.internal`. The host HTTP proxy changes that host to `localhost` before it checks `sbx policy`. If you write a deny or ask allowlist, allow `localhost` (or let `sbxSandbox()` add it). `denyNetwork` alone does not write that allowlist.
 
+### microsandbox (`microsandboxSandbox`)
+
+A microsandbox guest cannot reach your host by default. Turn on host access:
+
+```ts
+import { microsandboxSandbox } from '@tanstack/ai-sandbox-microsandbox'
+
+const provider = microsandboxSandbox({ allowHostAccess: true })
+```
+
+The guest then calls `host.microsandbox.internal`, which maps to the loopback of your host. The guest can also reach every other service that listens on `127.0.0.1`. A `network: 'deny'` policy turns the guest network off, so bridged tools do not work with it.
+
 ### A deployed server (production)
 
-The default provisioner (`nodeHttpBridgeProvisioner`) binds loopback and tells the sandbox to call `127.0.0.1` (`host.docker.internal` for Docker). It does not read your public host from the request. So a remote sandbox cannot reach it, even from a deployed server.
+The default provisioner (`nodeHttpBridgeProvisioner`) binds loopback and tells the sandbox to call `127.0.0.1` (`host.docker.internal` for Docker, `host.microsandbox.internal` for microsandbox). It does not read your public host from the request. So a remote sandbox cannot reach it, even from a deployed server.
 
 Provide your own `ToolBridgeProvisioner` from a chat middleware with `provideToolBridgeProvisioner(ctx, provisioner)`. Its `provision()` returns the bridge with a `url` the sandbox can reach, for example your server's public URL. `withNgrokBridge` from `@tanstack/ai-sandbox/ngrok` is a working example. Every call still needs the bearer token for the run, so a public endpoint is safe.
 

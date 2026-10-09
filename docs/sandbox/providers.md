@@ -2,7 +2,7 @@
 title: Providers
 id: providers
 order: 3
-description: "Pick where a TanStack AI sandbox runs (local process, Docker container, Docker Sandboxes microVM, Daytona, Vercel, Sprites, Upstash Box, Blaxel, E2B, boxd, or Railway), install it, and configure it."
+description: "Pick where a TanStack AI sandbox runs (local process, Docker container, Docker Sandboxes microVM, Daytona, Vercel, Sprites, Upstash Box, Blaxel, E2B, boxd, Railway, or microsandbox), install it, and configure it."
 ---
 
 A provider is where the sandbox runs: a local process for a fast loop, or an isolated VM in production.
@@ -26,6 +26,7 @@ A provider is that place. Every provider has the same contract, so your [workspa
 | [E2B](https://e2b.dev) | `@tanstack/ai-sandbox-e2b` | microVM | `E2B_API_KEY` |
 | [boxd](https://boxd.sh) | `@tanstack/ai-sandbox-boxd` | microVM | `BOXD_API_KEY` and `BOXD_ORG`. |
 | [Railway](https://railway.com) | `@tanstack/ai-sandbox-railway` | microVM | `RAILWAY_API_TOKEN` or `RAILWAY_TOKEN`, and an environment. |
+| [microsandbox](https://github.com/superradcompany/microsandbox) | `@tanstack/ai-sandbox-microsandbox` | microVM (local) | Linux with KVM, macOS on Apple Silicon, or Windows with WHP. No account. |
 
 2. Install its package. This example installs the Docker provider. Use the package from your row.
 
@@ -81,6 +82,7 @@ import { blaxelSandbox } from '@tanstack/ai-sandbox-blaxel'
 import { e2bSandbox } from '@tanstack/ai-sandbox-e2b'
 import { boxdSandbox } from '@tanstack/ai-sandbox-boxd'
 import { railwaySandbox } from '@tanstack/ai-sandbox-railway'
+import { microsandboxSandbox } from '@tanstack/ai-sandbox-microsandbox'
 
 const dev = localProcessSandbox() // runs on your host
 const isolated = dockerSandbox({ image: 'node:22' }) // container
@@ -93,6 +95,7 @@ const blaxel = blaxelSandbox() // uses the API key or the CLI login
 const e2b = e2bSandbox() // reads E2B_API_KEY
 const boxd = boxdSandbox({ org: 'acme' }) // reads BOXD_API_KEY
 const railway = railwaySandbox() // reads RAILWAY_TOKEN and RAILWAY_ENVIRONMENT_ID
+const local = microsandboxSandbox() // microVM on this host; no credentials
 ```
 
 `dockerSandbox()` and `sbxSandbox()` come from the same package. Every other provider has its own package. For the edge, see [Cloudflare](./cloudflare).
@@ -159,6 +162,7 @@ The [run journal](./journal) reads this flag to decide how to read a run's outpu
 | Cloudflare | `false` |
 | boxd | `true` |
 | Railway | `true` |
+| microsandbox | `true` |
 
 A bring-your-own provider must set this flag too. For the reason behind each value, see [Providers (Advanced)](./providers-advanced#killableprocesses-per-provider).
 
