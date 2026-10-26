@@ -12,8 +12,10 @@ Thanks for contributing! This guide covers everything you need to get from a fre
 
 ## Prerequisites
 
+- **Node.js**: the version in `.nvmrc`. `nvm use` or `fnm use` reads it.
 - **pnpm**: 11.9.0 or newer. Use the version pinned in `packageManager` (`pnpm@11.9.0`).
   - Recommended: install via [Corepack](https://nodejs.org/api/corepack.html). Run `corepack enable` once and pnpm is managed automatically.
+  - Node 25 and later do not bundle Corepack. Install it first with `npm install -g corepack`.
 - **Git**.
 
 ## Initial setup
